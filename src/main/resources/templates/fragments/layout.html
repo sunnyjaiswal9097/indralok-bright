@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:fragment="layout(title, content)">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!--<title th:replace="${title} + ' | Indralok Bright'">Indralok Bright</title>-->
+  <title th:text="${title} + ' | Indralok Bright'">Indralok Bright</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo-box">
+      <span class="logo-icon">IB</span>
+      <div class="logo-text">
+        <span class="logo-primary">Indralok</span>
+        <span class="logo-secondary">Bright</span>
+      </div>
+    </div>
+    <button class="sidebar-close" id="sidebarClose"><i class="fas fa-times"></i></button>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <span class="nav-label">Main</span>
+      <!--<a th:href="@{/dashboard}" class="nav-item" th:classappend="${#httpServletRequest.requestURI == '/dashboard' or #httpServletRequest.requestURI == '/'} ? 'active' : ''">
+        <i class="fas fa-tachometer-alt"></i><span>Dashboard</span>
+      </a>-->
+	  
+	  <a th:href="@{/dashboard}" class="nav-item"
+	     th:classappend="${pageTitle == 'Dashboard'} ? 'active' : ''">
+	     <i class="fas fa-tachometer-alt"></i><span>Dashboard</span>
+	  </a>
+    </div>
+    <div class="nav-section">
+      <span class="nav-label">Documents</span>
+      <a th:href="@{/quotation}" class="nav-item" th:classappend="${pageTitle == 'Quotations'} ? 'active' : ''">
+        <i class="fas fa-file-invoice"></i><span>Quotations</span>
+      </a>
+      <a th:href="@{/quotation/new}" class="nav-item nav-sub">
+        <i class="fas fa-plus-circle"></i><span>New Quotation</span>
+      </a>
+      <a th:href="@{/purchase-order}" class="nav-item" th:classappend="${pageTitle == 'Purchase Orders'} ? 'active' : ''">
+        <i class="fas fa-shopping-cart"></i><span>Purchase Orders</span>
+      </a>
+      <a th:href="@{/purchase-order/new}" class="nav-item nav-sub">
+        <i class="fas fa-plus-circle"></i><span>New PO</span>
+      </a>
+    </div>
+    <div class="nav-section">
+      <span class="nav-label">Advanced Quotations</span>
+      <a th:href="@{/margin-quotation}" class="nav-item"
+         th:classappend="${{pageTitle == 'Margin Quotation'} } ? 'active' : ''">
+        <i class="fas fa-percentage"></i><span>Margin Quotation</span>
+      </a>
+      <a th:href="@{/margin-quotation/new}" class="nav-item nav-sub">
+        <i class="fas fa-plus-circle"></i><span>New Margin Quote</span>
+      </a>
+      <a th:href="@{/yearly-quotation}" class="nav-item"
+         th:classappend="${pageTitle == 'Yearly Quotation'} ? 'active' : ''">
+        <i class="fas fa-calendar-check"></i><span>Yearly Quotation</span>
+      </a>
+      <a th:href="@{/yearly-quotation/new}" class="nav-item nav-sub">
+        <i class="fas fa-plus-circle"></i><span>New Yearly Quote</span>
+      </a>
+    </div>
+    <div class="nav-section">
+      <span class="nav-label">Tools</span>
+      <a th:href="@{/search}" class="nav-item" th:classappend="${pageTitle == 'Search'} ? 'active' : ''">
+        <i class="fas fa-search"></i><span>Search</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar" sec:authentication="name">A</div>
+      <div class="user-details">
+        <span class="user-name" sec:authentication="name">User</span>
+        <span class="user-role" sec:authorize="hasRole('ROLE_ADMIN')">Administrator</span>
+        <span class="user-role" sec:authorize="hasRole('ROLE_USER')">Staff</span>
+      </div>
+    </div>
+    <a th:href="@{/logout}" class="logout-btn" onclick="return confirm('Logout?')">
+      <i class="fas fa-sign-out-alt"></i>
+    </a>
+  </div>
+</div>
+
+<!-- Overlay -->
+<div class="overlay" id="overlay"></div>
+
+<!-- Main Content -->
+<div class="main-wrapper">
+  <!-- Top Navbar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+      <div class="breadcrumb">
+        <span th:text="${pageTitle ?: 'Dashboard'}">Dashboard</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <a th:href="@{/search}" class="topbar-icon" title="Search"><i class="fas fa-search"></i></a>
+      <a th:href="@{/quotation/new}" class="topbar-btn">
+        <i class="fas fa-plus"></i> New Quotation
+      </a>
+    </div>
+  </header>
+
+  <!-- Flash Messages -->
+  <div class="flash-container">
+    <div th:if="${successMsg}" class="flash flash-success">
+      <i class="fas fa-check-circle"></i>
+      <span th:text="${successMsg}"></span>
+      <button class="flash-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+    </div>
+    <div th:if="${errorMsg}" class="flash flash-error">
+      <i class="fas fa-exclamation-circle"></i>
+      <span th:text="${errorMsg}"></span>
+      <button class="flash-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+    </div>
+  </div>
+
+  <!-- Page Content -->
+  <main class="page-content">
+    <th:block th:replace="${content}"/>
+  </main>
+
+  <footer class="page-footer">
+    <span>&copy; 2026 Indralok Bright. All rights reserved.</span>
+  </footer>
+</div>
+
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

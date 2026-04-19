@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head><title th:text="'Margin Quotation — ' + ${quotation.quotationNumber}">View</title></head>
+<body>
+<main>
+<div class="page-header">
+  <h2><i class="fas fa-percentage"></i> <span th:text="${quotation.quotationNumber}"></span></h2>
+  <div class="header-actions">
+    <a th:href="@{/margin-quotation}"                          class="btn btn-outline"><i class="fas fa-arrow-left"></i> Back</a>
+    <a th:href="@{/margin-quotation/{id}/edit(id=${quotation.id})}" class="btn btn-warning"><i class="fas fa-edit"></i> Edit</a>
+    <a th:href="@{/margin-quotation/{id}/pdf(id=${quotation.id})}"  class="btn btn-danger"><i class="fas fa-file-pdf"></i> Download PDF</a>
+  </div>
+</div>
+
+<div class="document-preview">
+  <!-- Header -->
+  <div class="doc-header">
+    <div class="doc-company">
+      <div class="doc-logo">IB</div>
+      <div>
+        <h2>INDRALOK BRIGHT</h2>
+        <p>GSTIN: 07BFUPJ8592J1ZH</p>
+        <p>Office No: 6, Building No.32C, B.R Complex Patparganj Road, East Delhi - 110091</p>
+        <p>Phone: 9097790655 / 9266452220 | indralokbright@gmail.com</p>
+      </div>
+    </div>
+    <div class="doc-meta">
+      <h3 class="doc-type-title">MARGIN QUOTATION</h3>
+      <table class="doc-meta-table">
+        <tr><td>Quotation No.:</td><td><strong th:text="${quotation.quotationNumber}"></strong></td></tr>
+        <tr><td>Date:</td><td><strong th:text="${#temporals.format(quotation.quotationDate,'dd/MM/yyyy')}"></strong></td></tr>
+        <tr th:if="${quotation.validityPeriod}"><td>Valid Till:</td><td th:text="${quotation.validityPeriod}"></td></tr>
+        <tr><td>Status:</td>
+            <td><span class="badge" th:classappend="'badge-'+${quotation.status.toLowerCase()}" th:text="${quotation.status}"></span></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Addresses -->
+  <div class="doc-address-row">
+    <div class="doc-address-box">
+      <h4>Bill To</h4>
+      <p class="fw-bold" th:text="${quotation.billToCompany}"></p>
+      <p th:if="${quotation.billToGstin}">GSTIN: <span th:text="${quotation.billToGstin}"></span></p>
+      <p th:if="${quotation.billToAddress}" th:text="${quotation.billToAddress}"></p>
+    </div>
+    <div class="doc-address-box">
+      <h4>Consignee (Ship To)</h4>
+      <p class="fw-bold" th:if="${quotation.shipToCompany}" th:text="${quotation.shipToCompany}"></p>
+      <p th:if="${quotation.shipToSiteInfo}" th:text="${quotation.shipToSiteInfo}"></p>
+      <p th:if="${quotation.shipToAddress}" th:text="${quotation.shipToAddress}"></p>
+      <p th:if="${quotation.shipToCity}">
+        <span th:text="${quotation.shipToCity}"></span>
+        <span th:if="${quotation.shipToState}">, <span th:text="${quotation.shipToState}"></span></span>
+        <span th:if="${quotation.shipToPincode}"> - <span th:text="${quotation.shipToPincode}"></span></span>
+      </p>
+    </div>
+  </div>
+
+  <!-- Items Table with Margin Columns -->
+  <table class="doc-items-table margin-view-table">
+    <thead>
+      <tr>
+        <th>S.No</th><th>Description</th><th>Qty</th><th>Unit</th>
+        <th>Rate (₹)</th>
+        <th>Base Amt (₹)</th>
+        <th class="col-margin-hdr">Margin %</th>
+        <th class="col-margin-hdr">Margin Amt (₹)</th>
+        <th class="col-final-hdr">Final Amt (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="item : ${quotation.items}">
+        <td class="center" th:text="${item.sNo}"></td>
+        <td th:text="${item.description}" style="white-space:pre-wrap"></td>
+        <td class="right" th:text="${#numbers.formatDecimal(item.quantity,1,'COMMA',2,'POINT')}"></td>
+        <td class="center" th:text="${item.unit}"></td>
+        <td class="right" th:text="${#numbers.formatDecimal(item.rate,1,'COMMA',2,'POINT')}"></td>
+        <td class="right" th:text="${#numbers.formatDecimal(item.baseAmount,1,'COMMA',2,'POINT')}"></td>
+        <td class="center col-margin-hdr" th:text="${item.marginPercent} + '%'"></td>
+        <td class="right col-margin-hdr text-success" th:text="${#numbers.formatDecimal(item.marginAmount,1,'COMMA',2,'POINT')}"></td>
+        <td class="right fw-bold col-final-hdr" th:text="${#numbers.formatDecimal(item.finalAmount,1,'COMMA',2,'POINT')}"></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Totals -->
+  <div class="doc-totals-row">
+    <div class="doc-amount-words">
+      <strong>Amount in Words:</strong><br/>
+      <em th:text="${@numberToWordsUtil.convert(quotation.grandTotal)}"></em>
+    </div>
+    <table class="doc-totals-table">
+      <tr><td>Sub Total (Base):</td>
+          <td class="right">₹<span th:text="${#numbers.formatDecimal(quotation.subtotal,1,'COMMA',2,'POINT')}"></span></td></tr>
+      <tr class="margin-row">
+        <td>Total Margin:</td>
+        <td class="right text-success">₹<span th:text="${#numbers.formatDecimal(quotation.totalMarginAmount,1,'COMMA',2,'POINT')}"></span></td></tr>
+      <tr><td>Total After Margin:</td>
+          <td class="right fw-bold">₹<span th:text="${#numbers.formatDecimal(quotation.totalAfterMargin,1,'COMMA',2,'POINT')}"></span></td></tr>
+      <tr th:if="${quotation.gstType=='CGST_SGST' and quotation.cgstPercent > 0}">
+        <td>CGST @ <span th:text="${quotation.cgstPercent}"></span>%:</td>
+        <td class="right">₹<span th:text="${#numbers.formatDecimal(quotation.cgstAmount,1,'COMMA',2,'POINT')}"></span></td></tr>
+      <tr th:if="${quotation.gstType=='CGST_SGST' and quotation.sgstPercent > 0}">
+        <td>SGST @ <span th:text="${quotation.sgstPercent}"></span>%:</td>
+        <td class="right">₹<span th:text="${#numbers.formatDecimal(quotation.sgstAmount,1,'COMMA',2,'POINT')}"></span></td></tr>
+      <tr th:if="${quotation.gstType=='IGST' and quotation.igstPercent > 0}">
+        <td>IGST @ <span th:text="${quotation.igstPercent}"></span>%:</td>
+        <td class="right">₹<span th:text="${#numbers.formatDecimal(quotation.igstAmount,1,'COMMA',2,'POINT')}"></span></td></tr>
+      <tr class="total-final-row">
+        <td><strong>Grand Total:</strong></td>
+        <td class="right"><strong>₹<span th:text="${#numbers.formatDecimal(quotation.grandTotal,1,'COMMA',2,'POINT')}"></span></strong></td></tr>
+    </table>
+  </div>
+
+  <div th:if="${quotation.notes}" class="doc-notes">
+    <strong>Terms &amp; Conditions:</strong><br/>
+    <span th:text="${quotation.notes}" style="white-space:pre-wrap"></span>
+  </div>
+
+  <div class="doc-bank">
+    <strong>Bank Details for Payment</strong>
+    <table class="bank-info-table">
+      <tr><td>Beneficiary Name:</td><td>Indralok Bright</td></tr>
+      <tr><td>Account No.:</td><td>924020047590929</td></tr>
+      <tr><td>IFSC Code:</td><td>UTIB0001540</td></tr>
+      <tr><td>Bank:</td><td>Axis Bank</td></tr>
+    </table>
+  </div>
+
+  <div class="doc-signature">
+    <div class="sig-block"><div class="sig-line"></div><p>Prepared By</p></div>
+    <div class="sig-block"><div class="sig-line"></div><p>For Indralok Bright<br/><small>Authorised Signatory</small></p></div>
+  </div>
+</div>
+
+<!-- Status Update -->
+<div class="card" style="margin-top:16px">
+  <div class="card-header"><h3>Update Status</h3></div>
+  <div class="card-body">
+    <form th:action="@{/margin-quotation/{id}/status(id=${quotation.id})}" method="post" class="inline-form">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+      <select name="status" class="form-control" style="width:180px">
+        <option value="DRAFT"    th:selected="${quotation.status=='DRAFT'}">Draft</option>
+        <option value="SENT"     th:selected="${quotation.status=='SENT'}">Sent</option>
+        <option value="ACCEPTED" th:selected="${quotation.status=='ACCEPTED'}">Accepted</option>
+        <option value="REJECTED" th:selected="${quotation.status=='REJECTED'}">Rejected</option>
+      </select>
+      <button type="submit" class="btn btn-primary">Update</button>
+    </form>
+  </div>
+</div>
+</main>
+</body>
+</html>

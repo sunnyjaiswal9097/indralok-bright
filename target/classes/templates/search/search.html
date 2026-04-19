@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head><title>Search</title></head>
+<body>
+<main>
+<div class="page-header">
+  <h2><i class="fas fa-search"></i> Search</h2>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form th:action="@{/search}" method="get" class="search-form">
+      <div class="search-bar-group">
+        <input type="text" name="keyword" class="form-control search-bar-input"
+               th:value="${keyword}" placeholder="Search by quotation number, PO number, company name..." autofocus/>
+        <div class="search-type-tabs">
+          <label class="radio-tab" th:classappend="${type=='all'} ? 'active' : ''">
+            <input type="radio" name="type" value="all" th:checked="${type=='all'}"/> All
+          </label>
+          <label class="radio-tab" th:classappend="${type=='quotation'} ? 'active' : ''">
+            <input type="radio" name="type" value="quotation" th:checked="${type=='quotation'}"/> Quotations
+          </label>
+          <label class="radio-tab" th:classappend="${type=='po'} ? 'active' : ''">
+            <input type="radio" name="type" value="po" th:checked="${type=='po'}"/> Purchase Orders
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Quotation Results -->
+<div th:if="${quotations != null}" class="card" style="margin-top:16px">
+  <div class="card-header">
+    <h3><i class="fas fa-file-invoice"></i> Quotation Results
+      <span class="badge badge-info" th:text="${#lists.size(quotations)}"></span>
+    </h3>
+  </div>
+  <div class="card-body p0">
+    <div th:if="${#lists.isEmpty(quotations)}" class="empty-state-sm">No quotations found for "<span th:text="${keyword}"></span>"</div>
+    <table th:unless="${#lists.isEmpty(quotations)}" class="table">
+      <thead><tr><th>Quotation No.</th><th>Date</th><th>Client</th><th>Site</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        <tr th:each="q : ${quotations}">
+          <td><a th:href="@{/quotation/{id}(id=${q.id})}" class="link-primary fw-bold" th:text="${q.quotationNumber}"></a></td>
+          <td th:text="${#temporals.format(q.quotationDate,'dd/MM/yyyy')}"></td>
+          <td th:text="${q.billToCompany}"></td>
+          <td th:text="${q.shipToCompany ?: '-'}"></td>
+          <td class="text-right">₹<span th:text="${#numbers.formatDecimal(q.totalAmount,1,'COMMA',2,'POINT')}"></span></td>
+          <td><span class="badge" th:classappend="'badge-' + ${q.status.toLowerCase()}" th:text="${q.status}"></span></td>
+          <td class="action-cell">
+            <a th:href="@{/quotation/{id}(id=${q.id})}" class="btn btn-icon btn-info" title="View"><i class="fas fa-eye"></i></a>
+            <a th:href="@{/quotation/{id}/edit(id=${q.id})}" class="btn btn-icon btn-warning" title="Edit"><i class="fas fa-edit"></i></a>
+            <a th:href="@{/quotation/{id}/pdf(id=${q.id})}" class="btn btn-icon btn-danger" title="PDF"><i class="fas fa-file-pdf"></i></a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- PO Results -->
+<div th:if="${purchaseOrders != null}" class="card" style="margin-top:16px">
+  <div class="card-header">
+    <h3><i class="fas fa-shopping-cart"></i> Purchase Order Results
+      <span class="badge badge-info" th:text="${#lists.size(purchaseOrders)}"></span>
+    </h3>
+  </div>
+  <div class="card-body p0">
+    <div th:if="${#lists.isEmpty(purchaseOrders)}" class="empty-state-sm">No purchase orders found for "<span th:text="${keyword}"></span>"</div>
+    <table th:unless="${#lists.isEmpty(purchaseOrders)}" class="table">
+      <thead><tr><th>PO Number</th><th>Date</th><th>Vendor</th><th>Site</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        <tr th:each="po : ${purchaseOrders}">
+          <td><a th:href="@{/purchase-order/{id}(id=${po.id})}" class="link-primary fw-bold" th:text="${po.poNumber}"></a></td>
+          <td th:text="${#temporals.format(po.poDate,'dd/MM/yyyy')}"></td>
+          <td th:text="${po.vendorName}"></td>
+          <td th:text="${po.deliverySite ?: '-'}"></td>
+          <td class="text-right">₹<span th:text="${#numbers.formatDecimal(po.totalAmount,1,'COMMA',2,'POINT')}"></span></td>
+          <td><span class="badge" th:classappend="'badge-' + ${po.status.toLowerCase()}" th:text="${po.status}"></span></td>
+          <td class="action-cell">
+            <a th:href="@{/purchase-order/{id}(id=${po.id})}" class="btn btn-icon btn-info" title="View"><i class="fas fa-eye"></i></a>
+            <a th:href="@{/purchase-order/{id}/edit(id=${po.id})}" class="btn btn-icon btn-warning" title="Edit"><i class="fas fa-edit"></i></a>
+            <a th:href="@{/purchase-order/{id}/pdf(id=${po.id})}" class="btn btn-icon btn-danger" title="PDF"><i class="fas fa-file-pdf"></i></a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div th:if="${keyword == null or keyword.isBlank()}" class="search-tips card" style="margin-top:16px">
+  <div class="card-body">
+    <h3><i class="fas fa-lightbulb"></i> Search Tips</h3>
+    <ul>
+      <li>Search by <strong>Quotation Number</strong> e.g. <code>IB-2026-0001</code></li>
+      <li>Search by <strong>PO Number</strong> e.g. <code>PO-2026-0001</code></li>
+      <li>Search by <strong>Company/Client Name</strong> e.g. <code>EFC Limited</code></li>
+      <li>Search by <strong>Site Name</strong> e.g. <code>TCS Sector 157</code></li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  // Highlight radio tab on click
+  document.querySelectorAll('.radio-tab input').forEach(radio => {
+    radio.addEventListener('change', () => {
+      document.querySelectorAll('.radio-tab').forEach(l => l.classList.remove('active'));
+      radio.closest('.radio-tab').classList.add('active');
+    });
+  });
+</script>
+</main>
+</body>
+</html>

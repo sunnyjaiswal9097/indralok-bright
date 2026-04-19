@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login | Indralok Bright</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body class="login-page">
+
+<div class="login-container">
+  <div class="login-left">
+    <div class="login-brand">
+      <div class="login-logo">IB</div>
+      <h1>Indralok Bright</h1>
+      <p>Quotation &amp; Purchase Order Management System</p>
+    </div>
+    <div class="login-features">
+      <div class="feature-item"><i class="fas fa-file-invoice"></i><span>Create &amp; Manage Quotations</span></div>
+      <div class="feature-item"><i class="fas fa-shopping-cart"></i><span>Purchase Order Management</span></div>
+      <div class="feature-item"><i class="fas fa-file-pdf"></i><span>Professional PDF Generation</span></div>
+      <div class="feature-item"><i class="fas fa-search"></i><span>Advanced Search &amp; Filter</span></div>
+      <div class="feature-item"><i class="fas fa-calculator"></i><span>GST Auto Calculation</span></div>
+    </div>
+  </div>
+  <div class="login-right">
+    <div class="login-card">
+      <div class="login-card-header">
+        <h2><i class="fas fa-lock"></i> Sign In</h2>
+        <p>Welcome back! Please enter your credentials.</p>
+      </div>
+
+      <div th:if="${errorMsg}" class="flash flash-error" style="margin-bottom:16px">
+        <i class="fas fa-exclamation-circle"></i>
+        <span th:text="${errorMsg}"></span>
+      </div>
+      <div th:if="${successMsg}" class="flash flash-success" style="margin-bottom:16px">
+        <i class="fas fa-check-circle"></i>
+        <span th:text="${successMsg}"></span>
+      </div>
+
+      <form th:action="@{/login}" method="post" class="login-form">
+        <div class="form-group">
+          <label for="username"><i class="fas fa-user"></i> Username</label>
+          <input type="text" id="username" name="username" class="form-control"
+                 placeholder="Enter username" required autofocus/>
+        </div>
+        <div class="form-group">
+          <label for="password"><i class="fas fa-lock"></i> Password</label>
+          <div class="password-wrapper">
+            <input type="password" id="password" name="password" class="form-control"
+                   placeholder="Enter password" required/>
+            <button type="button" class="password-toggle" onclick="togglePassword()">
+              <i class="fas fa-eye" id="eyeIcon"></i>
+            </button>
+          </div>
+        </div>
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <button type="submit" class="btn btn-primary btn-block">
+          <i class="fas fa-sign-in-alt"></i> Login
+        </button>
+      </form>
+      <div class="login-hint">
+        <small><i class="fas fa-info-circle"></i> Default: <strong>admin</strong> / <strong>admin123</strong></small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function togglePassword() {
+    const p = document.getElementById('password');
+    const icon = document.getElementById('eyeIcon');
+    if (p.type === 'password') { p.type = 'text'; icon.classList.replace('fa-eye','fa-eye-slash'); }
+    else { p.type = 'password'; icon.classList.replace('fa-eye-slash','fa-eye'); }
+  }
+</script>
+</body>
+</html>

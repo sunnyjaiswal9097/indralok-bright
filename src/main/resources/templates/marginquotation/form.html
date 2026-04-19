@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head><title th:text="${isEdit} ? 'Edit Margin Quotation' : 'New Margin Quotation'">Margin Quotation</title></head>
+<body>
+<main>
+<div class="page-header">
+  <div class="page-header-left">
+    <h2><i class="fas fa-percentage"></i>
+      <span th:text="${isEdit} ? 'Edit — ' + ${quotation.quotationNumber} : 'New Margin Quotation'"></span>
+    </h2>
+    <span class="page-subtitle">Columns: Qty × Rate = Base → + Margin% → Final Amount → GST → Grand Total</span>
+  </div>
+  <a th:href="@{/margin-quotation}" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Back</a>
+</div>
+
+<form th:action="@{/margin-quotation/save}" method="post" id="quotationForm">
+  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+  <input type="hidden" name="editId" th:if="${isEdit}" th:value="${quotation.id}"/>
+
+  <!-- Parties -->
+  <div class="form-card">
+    <div class="form-card-header"><i class="fas fa-building"></i> Party Details</div>
+    <div class="form-grid-2">
+      <div class="form-section">
+        <h4 class="section-label">Bill To</h4>
+        <div class="form-group">
+          <label>Company Name <span class="required">*</span></label>
+          <input type="text" name="billToCompany" class="form-control" required
+                 th:value="${quotation.billToCompany}" placeholder="e.g. EFC LIMITED, Pune"/>
+        </div>
+        <div class="form-group">
+          <label>GSTIN</label>
+          <input type="text" name="billToGstin" class="form-control" th:value="${quotation.billToGstin}"/>
+        </div>
+        <div class="form-group">
+          <label>Address</label>
+          <textarea name="billToAddress" class="form-control" rows="3"
+                    th:text="${quotation.billToAddress}"></textarea>
+        </div>
+      </div>
+      <div class="form-section">
+        <h4 class="section-label">Consignee / Ship To</h4>
+        <div class="form-group">
+          <label>Company Name</label>
+          <input type="text" name="shipToCompany" class="form-control" th:value="${quotation.shipToCompany}"/>
+        </div>
+        <div class="form-group">
+          <label>Site Info</label>
+          <input type="text" name="shipToSiteInfo" class="form-control" th:value="${quotation.shipToSiteInfo}"/>
+        </div>
+        <div class="form-group">
+          <label>Address</label>
+          <textarea name="shipToAddress" class="form-control" rows="2" th:text="${quotation.shipToAddress}"></textarea>
+        </div>
+        <div class="form-grid-3">
+          <div class="form-group"><label>City</label>
+            <input type="text" name="shipToCity"    class="form-control" th:value="${quotation.shipToCity}"/></div>
+          <div class="form-group"><label>State</label>
+            <input type="text" name="shipToState"   class="form-control" th:value="${quotation.shipToState}"/></div>
+          <div class="form-group"><label>PIN</label>
+            <input type="text" name="shipToPincode" class="form-control" th:value="${quotation.shipToPincode}" maxlength="6"/></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meta + GST -->
+  <div class="form-card">
+    <div class="form-card-header"><i class="fas fa-calendar-alt"></i> Quotation Details &amp; GST</div>
+    <div class="form-grid-4">
+      <div class="form-group">
+        <label>Date <span class="required">*</span></label>
+        <input type="date" name="quotationDate" class="form-control" required
+               th:value="${#temporals.format(quotation.quotationDate,'yyyy-MM-dd')}"/>
+      </div>
+      <div class="form-group">
+        <label>Valid Till</label>
+        <input type="text" name="validityPeriod" class="form-control"
+               th:value="${quotation.validityPeriod}" placeholder="e.g. 30 days"/>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select name="status" class="form-control">
+          <option value="DRAFT"    th:selected="${quotation.status=='DRAFT'}">Draft</option>
+          <option value="SENT"     th:selected="${quotation.status=='SENT'}">Sent</option>
+          <option value="ACCEPTED" th:selected="${quotation.status=='ACCEPTED'}">Accepted</option>
+          <option value="REJECTED" th:selected="${quotation.status=='REJECTED'}">Rejected</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>GST Type</label>
+        <select name="gstType" id="gstType" class="form-control" onchange="toggleGst()">
+          <option value="CGST_SGST" th:selected="${quotation.gstType=='CGST_SGST'}">CGST + SGST</option>
+          <option value="IGST"      th:selected="${quotation.gstType=='IGST'}">IGST</option>
+          <option value="NONE"      th:selected="${quotation.gstType=='NONE'}">No GST</option>
+        </select>
+      </div>
+    </div>
+    <!-- GST % — freely editable -->
+    <div class="gst-pct-row" style="padding:0 20px 20px; display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;">
+      <div class="form-group gst-field" id="cgstField" style="margin:0;flex:1;min-width:140px;">
+        <label>CGST % <span class="gst-hint">(type any value)</span></label>
+        <div class="pct-input-wrap">
+          <input type="number" name="cgstPercent" id="cgstPercent" class="form-control"
+                 step="0.01" min="0" max="100" th:value="${quotation.cgstPercent}" onchange="recalculate()"/>
+          <span class="pct-symbol">%</span>
+        </div>
+      </div>
+      <div class="form-group gst-field" id="sgstField" style="margin:0;flex:1;min-width:140px;">
+        <label>SGST % <span class="gst-hint">(type any value)</span></label>
+        <div class="pct-input-wrap">
+          <input type="number" name="sgstPercent" id="sgstPercent" class="form-control"
+                 step="0.01" min="0" max="100" th:value="${quotation.sgstPercent}" onchange="recalculate()"/>
+          <span class="pct-symbol">%</span>
+        </div>
+      </div>
+      <div class="form-group gst-field" id="igstField" style="margin:0;flex:1;min-width:140px;display:none;">
+        <label>IGST % <span class="gst-hint">(type any value)</span></label>
+        <div class="pct-input-wrap">
+          <input type="number" name="igstPercent" id="igstPercent" class="form-control"
+                 step="0.01" min="0" max="100" th:value="${quotation.igstPercent}" onchange="recalculate()"/>
+          <span class="pct-symbol">%</span>
+        </div>
+      </div>
+      <div class="gst-summary-box" id="gstSummaryBox">
+        <span id="gstSummaryText">GST: 9% + 9% = 18%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Items Table with Margin -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <span><i class="fas fa-table"></i> Line Items — with Margin</span>
+      <button type="button" class="btn btn-sm btn-primary" onclick="addRow()"><i class="fas fa-plus"></i> Add Row</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table items-form-table margin-table" id="itemsTable">
+        <thead>
+          <tr>
+            <th style="width:42px">S.No</th>
+            <th>Description</th>
+            <th style="width:105px">Quantity</th>
+            <th style="width:85px">Unit</th>
+            <th style="width:110px">Rate (₹)</th>
+            <th style="width:120px">Base Amt (₹)</th>
+            <th style="width:90px" class="col-margin">Margin %</th>
+            <th style="width:120px" class="col-margin">Margin Amt (₹)</th>
+            <th style="width:130px" class="col-final">Final Amt (₹)</th>
+            <th style="width:38px"></th>
+          </tr>
+        </thead>
+        <tbody id="itemsBody">
+          <tr th:each="item, stat : ${quotation.items}">
+            <td class="center sno-cell"><span class="sno" th:text="${stat.count}"></span></td>
+            <td><textarea name="itemDescription" class="form-control" rows="2"
+                          th:text="${item.description}" required></textarea></td>
+            <td><input type="number" name="itemQuantity" class="form-control qty-input text-right"
+                       step="0.01" min="0" th:value="${item.quantity}" onchange="calcRow(this)" required/></td>
+            <td>
+              <select name="itemUnit" class="form-control">
+                <option value="SQFT" th:selected="${item.unit=='SQFT'}">SQFT</option>
+                <option value="RFT"  th:selected="${item.unit=='RFT'}">RFT</option>
+                <option value="NOS"  th:selected="${item.unit=='NOS'}">NOS</option>
+                <option value="MTR"  th:selected="${item.unit=='MTR'}">MTR</option>
+                <option value="KG"   th:selected="${item.unit=='KG'}">KG</option>
+                <option value="LTR"  th:selected="${item.unit=='LTR'}">LTR</option>
+                <option value="LS"   th:selected="${item.unit=='LS'}">LS</option>
+              </select>
+            </td>
+            <td><input type="number" name="itemRate" class="form-control rate-input text-right"
+                       step="0.01" min="0" th:value="${item.rate}" onchange="calcRow(this)" required/></td>
+            <td><input type="text" name="baseAmount" class="form-control base-display text-right" readonly/></td>
+            <td class="col-margin">
+              <div class="pct-input-wrap">
+                <input type="number" name="itemMarginPercent" class="form-control margin-pct text-right"
+                       step="0.01" min="0" max="1000" th:value="${item.marginPercent}" onchange="calcRow(this)"/>
+                <span class="pct-symbol">%</span>
+              </div>
+            </td>
+            <td class="col-margin"><input type="text" class="form-control margin-amt-display text-right" readonly/></td>
+            <td class="col-final"><input type="text" class="form-control final-display text-right fw-bold" readonly/></td>
+            <td><button type="button" class="btn btn-icon btn-delete" onclick="removeRow(this)"><i class="fas fa-trash"></i></button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Live Totals Panel -->
+    <div class="totals-form">
+      <div class="total-spacer"></div>
+      <div class="totals-right margin-totals">
+        <div class="total-row-item">
+          <span>Sub Total (Base):</span>
+          <span class="fw-bold" id="subtotalDisplay">₹0.00</span>
+        </div>
+        <div class="total-row-item text-success">
+          <span>Total Margin:</span>
+          <span id="marginTotalDisplay">₹0.00</span>
+        </div>
+        <div class="total-row-item">
+          <span>Total After Margin:</span>
+          <span class="fw-bold" id="afterMarginDisplay">₹0.00</span>
+        </div>
+        <div class="total-divider"></div>
+        <div class="total-row-item" id="cgstRow">
+          <span id="cgstLabel">CGST (9%):</span>
+          <span id="cgstDisplay">₹0.00</span>
+        </div>
+        <div class="total-row-item" id="sgstRow">
+          <span id="sgstLabel">SGST (9%):</span>
+          <span id="sgstDisplay">₹0.00</span>
+        </div>
+        <div class="total-row-item" id="igstRow" style="display:none">
+          <span id="igstLabel">IGST:</span>
+          <span id="igstDisplay">₹0.00</span>
+        </div>
+        <div class="total-row-item total-final">
+          <span>Grand Total:</span>
+          <span id="grandTotalDisplay" class="grand-total-val">₹0.00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div class="form-card">
+    <div class="form-card-header"><i class="fas fa-sticky-note"></i> Notes / Terms</div>
+    <div style="padding:16px 20px;">
+      <textarea name="notes" class="form-control" rows="3"
+                th:text="${quotation.notes}" placeholder="Terms, conditions, payment terms..."></textarea>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <a th:href="@{/margin-quotation}" class="btn btn-outline">Cancel</a>
+    <button type="submit" class="btn btn-primary btn-lg">
+      <i class="fas fa-save"></i>
+      <span th:text="${isEdit} ? 'Update Quotation' : 'Save Quotation'"></span>
+    </button>
+  </div>
+</form>
+
+<!-- Row Template -->
+<template id="rowTemplate">
+  <tr>
+    <td class="center sno-cell"><span class="sno"></span></td>
+    <td><textarea name="itemDescription" class="form-control" rows="2" required></textarea></td>
+    <td><input type="number" name="itemQuantity" class="form-control qty-input text-right" step="0.01" min="0" onchange="calcRow(this)" required/></td>
+    <td>
+      <select name="itemUnit" class="form-control">
+        <option value="SQFT">SQFT</option><option value="RFT">RFT</option>
+        <option value="NOS">NOS</option><option value="MTR">MTR</option>
+        <option value="KG">KG</option><option value="LTR">LTR</option><option value="LS">LS</option>
+      </select>
+    </td>
+    <td><input type="number" name="itemRate" class="form-control rate-input text-right" step="0.01" min="0" onchange="calcRow(this)" required/></td>
+    <td><input type="text" name="baseAmount" class="form-control base-display text-right" readonly/></td>
+    <td class="col-margin">
+      <div class="pct-input-wrap">
+        <input type="number" name="itemMarginPercent" class="form-control margin-pct text-right" step="0.01" min="0" max="1000" value="0" onchange="calcRow(this)"/>
+        <span class="pct-symbol">%</span>
+      </div>
+    </td>
+    <td class="col-margin"><input type="text" class="form-control margin-amt-display text-right" readonly/></td>
+    <td class="col-final"><input type="text" class="form-control final-display text-right fw-bold" readonly/></td>
+    <td><button type="button" class="btn btn-icon btn-delete" onclick="removeRow(this)"><i class="fas fa-trash"></i></button></td>
+  </tr>
+</template>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  if (document.querySelectorAll('#itemsBody tr').length === 0) addRow();
+  // init all rows
+  document.querySelectorAll('#itemsBody tr').forEach(r => initRow(r));
+  toggleGst();
+  recalculate();
+});
+
+function addRow() {
+  const clone = document.getElementById('rowTemplate').content.cloneNode(true);
+  document.getElementById('itemsBody').appendChild(clone);
+  updateSNos();
+}
+
+function removeRow(btn) {
+  if (document.querySelectorAll('#itemsBody tr').length <= 1) { alert('At least one item required.'); return; }
+  btn.closest('tr').remove();
+  updateSNos();
+  recalculate();
+}
+
+function updateSNos() {
+  document.querySelectorAll('#itemsBody .sno').forEach((s, i) => s.textContent = i + 1);
+}
+
+function initRow(row) {
+  calcRow(row.querySelector('.qty-input'));
+}
+
+function calcRow(input) {
+  const row = input.closest('tr');
+  const qty  = parseFloat(row.querySelector('.qty-input').value)    || 0;
+  const rate = parseFloat(row.querySelector('.rate-input').value)   || 0;
+  const mPct = parseFloat(row.querySelector('.margin-pct').value)   || 0;
+
+  const base   = qty * rate;
+  const mAmt   = base * mPct / 100;
+  const final_ = base + mAmt;
+
+  row.querySelector('.base-display').value       = base.toFixed(2);
+  row.querySelector('.margin-amt-display').value = mAmt.toFixed(2);
+  row.querySelector('.final-display').value      = final_.toFixed(2);
+
+  recalculate();
+}
+
+function recalculate() {
+  let subBase = 0, marginTotal = 0, afterMargin = 0;
+  document.querySelectorAll('#itemsBody tr').forEach(row => {
+    subBase     += parseFloat(row.querySelector('.base-display')?.value)       || 0;
+    marginTotal += parseFloat(row.querySelector('.margin-amt-display')?.value) || 0;
+    afterMargin += parseFloat(row.querySelector('.final-display')?.value)      || 0;
+  });
+
+  const gstType = document.getElementById('gstType').value;
+  const cp = parseFloat(document.getElementById('cgstPercent').value) || 0;
+  const sp = parseFloat(document.getElementById('sgstPercent').value) || 0;
+  const ip = parseFloat(document.getElementById('igstPercent').value) || 0;
+
+  let grandTotal = afterMargin;
+
+  if (gstType === 'CGST_SGST') {
+    const cgst = afterMargin * cp / 100;
+    const sgst = afterMargin * sp / 100;
+    grandTotal = afterMargin + cgst + sgst;
+    document.getElementById('cgstDisplay').textContent = '₹' + fmt(cgst);
+    document.getElementById('sgstDisplay').textContent = '₹' + fmt(sgst);
+    document.getElementById('cgstLabel').textContent   = 'CGST (' + cp + '%):';
+    document.getElementById('sgstLabel').textContent   = 'SGST (' + sp + '%):';
+    document.getElementById('gstSummaryText').textContent = 'GST: ' + cp + '% + ' + sp + '% = ' + (cp+sp) + '%';
+  } else if (gstType === 'IGST') {
+    const igst = afterMargin * ip / 100;
+    grandTotal = afterMargin + igst;
+    document.getElementById('igstDisplay').textContent = '₹' + fmt(igst);
+    document.getElementById('igstLabel').textContent   = 'IGST (' + ip + '%):';
+    document.getElementById('gstSummaryText').textContent = 'GST: IGST ' + ip + '%';
+  } else {
+    document.getElementById('gstSummaryText').textContent = 'No GST Applied';
+  }
+
+  document.getElementById('subtotalDisplay').textContent  = '₹' + fmt(subBase);
+  document.getElementById('marginTotalDisplay').textContent = '₹' + fmt(marginTotal);
+  document.getElementById('afterMarginDisplay').textContent = '₹' + fmt(afterMargin);
+  document.getElementById('grandTotalDisplay').textContent  = '₹' + fmt(grandTotal);
+}
+
+function toggleGst() {
+  const t = document.getElementById('gstType').value;
+  document.getElementById('cgstField').style.display = (t === 'CGST_SGST') ? '' : 'none';
+  document.getElementById('sgstField').style.display = (t === 'CGST_SGST') ? '' : 'none';
+  document.getElementById('igstField').style.display = (t === 'IGST')      ? '' : 'none';
+  document.getElementById('cgstRow').style.display   = (t === 'CGST_SGST') ? '' : 'none';
+  document.getElementById('sgstRow').style.display   = (t === 'CGST_SGST') ? '' : 'none';
+  document.getElementById('igstRow').style.display   = (t === 'IGST')      ? '' : 'none';
+  recalculate();
+}
+
+function fmt(n) { return n.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+</script>
+</main>
+</body>
+</html>

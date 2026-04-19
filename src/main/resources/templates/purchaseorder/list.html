@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head><title>Purchase Orders</title></head>
+<body>
+<main>
+<div class="page-header">
+  <h2><i class="fas fa-shopping-cart"></i> Purchase Orders</h2>
+  <a th:href="@{/purchase-order/new}" class="btn btn-primary"><i class="fas fa-plus"></i> New Purchase Order</a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="table-search">
+      <input type="text" id="tableSearch" class="form-control" placeholder="Filter by PO number, vendor..." oninput="filterTable()"/>
+      <i class="fas fa-search"></i>
+    </div>
+    <span class="record-count">Total: <strong th:text="${#lists.size(purchaseOrders)}">0</strong></span>
+  </div>
+  <div class="card-body p0">
+    <div th:if="${#lists.isEmpty(purchaseOrders)}" class="empty-state">
+      <i class="fas fa-shopping-cart fa-3x"></i>
+      <p>No purchase orders found.</p>
+      <a th:href="@{/purchase-order/new}" class="btn btn-primary">Create First PO</a>
+    </div>
+    <table th:unless="${#lists.isEmpty(purchaseOrders)}" class="table" id="mainTable">
+      <thead>
+        <tr>
+          <th>PO Number</th><th>Date</th><th>Vendor</th><th>Delivery Site</th>
+          <th>Ref. Quotation</th><th>Amount</th><th>Status</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="po : ${purchaseOrders}">
+          <td><a th:href="@{/purchase-order/{id}(id=${po.id})}" class="link-primary fw-bold" th:text="${po.poNumber}"></a></td>
+          <td th:text="${#temporals.format(po.poDate,'dd/MM/yyyy')}"></td>
+          <td th:text="${po.vendorName}"></td>
+          <td th:text="${po.deliverySite ?: '-'}"></td>
+          <td>
+            <a th:if="${po.quotation}" th:href="@{/quotation/{id}(id=${po.quotation.id})}"
+               class="link-primary" th:text="${po.quotation.quotationNumber}"></a>
+            <span th:unless="${po.quotation}">-</span>
+          </td>
+          <td class="text-center fw-bold">₹<span th:text="${#numbers.formatDecimal(po.totalAmount,1,'COMMA',2,'POINT')}"></span></td>
+          <td><span class="badge" th:classappend="'badge-' + ${po.status.toLowerCase()}" th:text="${po.status}"></span></td>
+          <td class="action-cell">
+            <a th:href="@{/purchase-order/{id}(id=${po.id})}" class="btn btn-icon btn-info" title="View"><i class="fas fa-eye"></i></a>
+            <a th:href="@{/purchase-order/{id}/edit(id=${po.id})}" class="btn btn-icon btn-warning" title="Edit"><i class="fas fa-edit"></i></a>
+            <a th:href="@{/purchase-order/{id}/pdf(id=${po.id})}" class="btn btn-icon btn-danger" title="Download PDF"><i class="fas fa-file-pdf"></i></a>
+            <form th:action="@{/purchase-order/{id}/delete(id=${po.id})}" method="post" style="display:inline"
+                  onsubmit="return confirm('Delete PO ' + '[[${po.poNumber}]]' + '?')">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+              <button type="submit" class="btn btn-icon btn-delete" title="Delete"><i class="fas fa-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</main>
+</body>
+</html>

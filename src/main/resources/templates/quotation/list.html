@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head><title>Quotations</title></head>
+<body>
+<main>
+<div class="page-header">
+  <h2><i class="fas fa-file-invoice"></i> Quotations</h2>
+  <a th:href="@{/quotation/new}" class="btn btn-primary"><i class="fas fa-plus"></i> New Quotation</a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="table-search">
+      <input type="text" id="tableSearch" class="form-control" placeholder="Filter by number, client..." oninput="filterTable()"/>
+      <i class="fas fa-search"></i>
+    </div>
+    <span class="record-count">Total: <strong th:text="${#lists.size(quotations)}">0</strong></span>
+  </div>
+  <div class="card-body p0">
+    <div th:if="${#lists.isEmpty(quotations)}" class="empty-state">
+      <i class="fas fa-file-invoice fa-3x"></i>
+      <p>No quotations found.</p>
+      <a th:href="@{/quotation/new}" class="btn btn-primary">Create First Quotation</a>
+    </div>
+    <table th:unless="${#lists.isEmpty(quotations)}" class="table" id="mainTable">
+      <thead>
+        <tr>
+          <th>Quotation No.</th><th>Date</th><th>Client</th>
+          <th>Site / Ship To</th><th>Amount</th><th>Status</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="q : ${quotations}">
+          <td><a th:href="@{/quotation/{id}(id=${q.id})}" class="link-primary fw-bold" th:text="${q.quotationNumber}"></a></td>
+          <td th:text="${#temporals.format(q.quotationDate, 'dd/MM/yyyy')}"></td>
+          <td th:text="${q.billToCompany}"></td>
+          <td th:text="${q.shipToCompany ?: '-'}"></td>
+          <td class="text-center fw-bold">₹<span th:text="${#numbers.formatDecimal(q.totalAmount,1,'COMMA',2,'POINT')}"></span></td>
+          <td><span class="badge" th:classappend="'badge-' + ${q.status.toLowerCase()}" th:text="${q.status}"></span></td>
+          <td class="action-cell">
+            <a th:href="@{/quotation/{id}(id=${q.id})}" class="btn btn-icon btn-info" title="View"><i class="fas fa-eye"></i></a>
+            <a th:href="@{/quotation/{id}/edit(id=${q.id})}" class="btn btn-icon btn-warning" title="Edit"><i class="fas fa-edit"></i></a>
+            <a th:href="@{/quotation/{id}/pdf(id=${q.id})}" class="btn btn-icon btn-danger" title="Download PDF"><i class="fas fa-file-pdf"></i></a>
+            <form th:action="@{/quotation/{id}/delete(id=${q.id})}" method="post" style="display:inline"
+                  onsubmit="return confirm('Delete quotation ' + '[[${q.quotationNumber}]]' + '?')">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+              <button type="submit" class="btn btn-icon btn-delete" title="Delete"><i class="fas fa-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</main>
+</body>
+</html>

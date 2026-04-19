@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head><title>Margin Quotations</title></head>
+<body>
+<main>
+<div class="page-header">
+  <div class="page-header-left">
+    <h2><i class="fas fa-percentage"></i> Margin Quotations</h2>
+    <span class="page-subtitle">Qty × Rate + Margin% = Final Amount with custom GST</span>
+  </div>
+  <a th:href="@{/margin-quotation/new}" class="btn btn-primary"><i class="fas fa-plus"></i> New Margin Quotation</a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="table-search">
+      <input type="text" id="tableSearch" class="form-control" placeholder="Filter by number, client..." oninput="filterTable()"/>
+      <i class="fas fa-search"></i>
+    </div>
+    <span class="record-count">Total: <strong th:text="${#lists.size(quotations)}">0</strong></span>
+  </div>
+  <div class="card-body p0">
+    <div th:if="${#lists.isEmpty(quotations)}" class="empty-state">
+      <i class="fas fa-percentage fa-3x"></i>
+      <p>No margin quotations yet.</p>
+      <a th:href="@{/margin-quotation/new}" class="btn btn-primary">Create First Margin Quotation</a>
+    </div>
+    <table th:unless="${#lists.isEmpty(quotations)}" class="table" id="mainTable">
+      <thead>
+        <tr>
+          <th>Quotation No.</th><th>Date</th><th>Client</th><th>Site</th>
+          <th>Base Amt</th><th>Margin</th><th>Grand Total</th><th>Status</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="q : ${quotations}">
+          <td><a th:href="@{/margin-quotation/{id}(id=${q.id})}" class="link-primary fw-bold"
+                 th:text="${q.quotationNumber}"></a></td>
+          <td th:text="${#temporals.format(q.quotationDate,'dd/MM/yyyy')}"></td>
+          <td th:text="${q.billToCompany}"></td>
+          <td th:text="${q.shipToCompany ?: '-'}"></td>
+          <td class="text-right">₹<span th:text="${#numbers.formatDecimal(q.subtotal,1,'COMMA',2,'POINT')}"></span></td>
+          <td class="text-right text-success fw-bold">
+            ₹<span th:text="${#numbers.formatDecimal(q.totalMarginAmount,1,'COMMA',2,'POINT')}"></span>
+          </td>
+          <td class="text-right fw-bold">₹<span th:text="${#numbers.formatDecimal(q.grandTotal,1,'COMMA',2,'POINT')}"></span></td>
+          <td><span class="badge" th:classappend="'badge-' + ${q.status.toLowerCase()}" th:text="${q.status}"></span></td>
+          <td class="action-cell">
+            <a th:href="@{/margin-quotation/{id}(id=${q.id})}"       class="btn btn-icon btn-info"    title="View"><i class="fas fa-eye"></i></a>
+            <a th:href="@{/margin-quotation/{id}/edit(id=${q.id})}"  class="btn btn-icon btn-warning" title="Edit"><i class="fas fa-edit"></i></a>
+            <a th:href="@{/margin-quotation/{id}/pdf(id=${q.id})}"   class="btn btn-icon btn-danger"  title="PDF"><i class="fas fa-file-pdf"></i></a>
+            <form th:action="@{/margin-quotation/{id}/delete(id=${q.id})}" method="post" style="display:inline"
+                  onsubmit="return confirm('Delete [[${q.quotationNumber}]]?')">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+              <button type="submit" class="btn btn-icon btn-delete" title="Delete"><i class="fas fa-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</main>
+</body>
+</html>
