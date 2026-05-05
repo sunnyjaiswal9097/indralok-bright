@@ -1,7 +1,13 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en"
-      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
-<head><title th:text="${isEdit} ? 'Edit Quotation' : 'New Quotation'">Quotation Form</title></head>
+      th:replace="~{fragments/layout :: layout('New Quotation', ~{::main})}">
+<head>
+<title th:text="${isEdit} ? 'Edit Quotation' : 'New Quotation'">Quotation Form</title>
+
+
+
+</head>
+
 <body>
 <main>
 <div class="page-header">
@@ -77,6 +83,14 @@
   <!-- Section: Meta -->
   <div class="form-card">
     <div class="form-card-header"><i class="fas fa-calendar-alt"></i> Quotation Details</div>
+    
+     <div class="form-group" style="margin-bottom: 16px;">
+    <label>Document Title</label>
+    <input type="text" name="quotationTitle" class="form-control"
+           th:value="${quotation.quotationTitle ?: 'QUOTATION'}"
+           placeholder="e.g. QUOTATION / PROFORMA INVOICE / PRICE OFFER"
+           style="max-width: 360px;"/> 
+  </div>
     <div class="form-grid-4">
       <div class="form-group">
         <label>Date <span class="required">*</span></label>
@@ -157,6 +171,7 @@
             <td>
               <select name="itemUnit" class="form-control">
                 <option value="SQFT" th:selected="${item.unit == 'SQFT'}">SQFT</option>
+                <option value="SQMT"  th:selected="${item.unit == 'SQMT'}">SQMT</option>
                 <option value="RFT"  th:selected="${item.unit == 'RFT'}">RFT</option>
                 <option value="NOS"  th:selected="${item.unit == 'NOS'}">NOS</option>
                 <option value="MTR"  th:selected="${item.unit == 'MTR'}">MTR</option>
@@ -216,6 +231,7 @@
     <td>
       <select name="itemUnit" class="form-control">
         <option value="SQFT">SQFT</option>
+        <option value="SQMT">SQMT</option>
         <option value="RFT">RFT</option>
         <option value="NOS">NOS</option>
         <option value="MTR">MTR</option>
@@ -230,7 +246,7 @@
   </tr>
 </template>
 
-<script>
+<!--<script>
   // Init on load
   window.addEventListener('DOMContentLoaded', () => {
     recalculate();
@@ -310,7 +326,136 @@
     document.getElementById('igstRow').style.display  = (type === 'IGST') ? '' : 'none';
     recalculate();
   }
+</script> -->
+
+
+<style>
+  .btn-insert {
+    color: #28a745;
+    margin-left: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 6px;
+    font-size: 14px;
+  }
+  .btn-insert:hover {
+    color: #155724;
+  }
+</style>
+
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    recalculate();
+    toggleGst();
+    if (document.querySelectorAll('#itemsBody tr').length === 0) addRow();
+    updateSNos(); // render insert buttons on existing rows
+  });
+
+  function buildRow() {
+    const template = document.getElementById('rowTemplate');
+    return template.content.cloneNode(true).querySelector('tr');
+  }
+
+  // Add row at end
+  function addRow() {
+    const tr = buildRow();
+    document.getElementById('itemsBody').appendChild(tr);
+    addInsertButton(tr);
+    updateSNos();
+  }
+
+  // Insert row AFTER a given row
+  function insertRowAfter(btn) {
+    const currentRow = btn.closest('tr');
+    const newRow = buildRow();
+    addInsertButton(newRow);
+    currentRow.insertAdjacentElement('afterend', newRow);
+    updateSNos();
+  }
+
+  // Add the "+ Insert" button to a row's last cell
+  function addInsertButton(tr) {
+    const actionTd = tr.querySelector('td:last-child');
+    // Avoid duplicate insert buttons
+    if (actionTd.querySelector('.btn-insert')) return;
+    const insertBtn = document.createElement('button');
+    insertBtn.type = 'button';
+    insertBtn.className = 'btn btn-icon btn-insert';
+    insertBtn.title = 'Insert row below';
+    insertBtn.innerHTML = '<i class="fas fa-plus-circle"></i>';
+    insertBtn.onclick = function() { insertRowAfter(this); };
+    actionTd.appendChild(insertBtn);
+  }
+
+  function removeRow(btn) {
+    const rows = document.querySelectorAll('#itemsBody tr');
+    if (rows.length <= 1) { alert('At least one item is required.'); return; }
+    btn.closest('tr').remove();
+    updateSNos();
+    recalculate();
+  }
+
+  function updateSNos() {
+    document.querySelectorAll('#itemsBody tr').forEach((row, idx) => {
+      const sno = row.querySelector('.sno');
+      if (sno) sno.textContent = idx + 1;
+      // Add insert button if missing (for rows loaded from server)
+      addInsertButton(row);
+    });
+  }
+
+  function calcRow(input) {
+    const row = input.closest('tr');
+    const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
+    const rate = parseFloat(row.querySelector('.rate-input').value) || 0;
+    row.querySelector('.amount-display').value = (qty * rate).toFixed(2);
+    recalculate();
+  }
+
+  function recalculate() {
+    let subtotal = 0;
+    document.querySelectorAll('.amount-display').forEach(el => {
+      subtotal += parseFloat(el.value) || 0;
+    });
+    const gstType = document.getElementById('gstType').value;
+    const cgstPct = parseFloat(document.getElementById('cgstPercent').value) || 0;
+    const sgstPct = parseFloat(document.getElementById('sgstPercent').value) || 0;
+    const igstPct = parseFloat(document.getElementById('igstPercent').value) || 0;
+
+    let total = subtotal;
+    if (gstType === 'CGST_SGST') {
+      const cgst = subtotal * cgstPct / 100;
+      const sgst = subtotal * sgstPct / 100;
+      document.getElementById('cgstDisplay').textContent = '₹' + cgst.toLocaleString('en-IN', {minimumFractionDigits:2});
+      document.getElementById('sgstDisplay').textContent = '₹' + sgst.toLocaleString('en-IN', {minimumFractionDigits:2});
+      document.getElementById('cgstLabel').textContent = 'CGST (' + cgstPct + '%):';
+      document.getElementById('sgstLabel').textContent = 'SGST (' + sgstPct + '%):';
+      total = subtotal + cgst + sgst;
+    } else if (gstType === 'IGST') {
+      const igst = subtotal * igstPct / 100;
+      document.getElementById('igstDisplay').textContent = '₹' + igst.toLocaleString('en-IN', {minimumFractionDigits:2});
+      document.getElementById('igstLabel').textContent = 'IGST (' + igstPct + '%):';
+      total = subtotal + igst;
+    }
+
+    document.getElementById('subtotalDisplay').textContent = '₹' + subtotal.toLocaleString('en-IN', {minimumFractionDigits:2});
+    document.getElementById('grandTotalDisplay').textContent = '₹' + total.toLocaleString('en-IN', {minimumFractionDigits:2});
+  }
+
+  function toggleGst() {
+    const type = document.getElementById('gstType').value;
+    document.getElementById('cgstField').style.display = (type === 'CGST_SGST') ? '' : 'none';
+    document.getElementById('sgstField').style.display = (type === 'CGST_SGST') ? '' : 'none';
+    document.getElementById('igstField').style.display = (type === 'IGST') ? '' : 'none';
+    document.getElementById('cgstRow').style.display   = (type === 'CGST_SGST') ? '' : 'none';
+    document.getElementById('sgstRow').style.display   = (type === 'CGST_SGST') ? '' : 'none';
+    document.getElementById('igstRow').style.display   = (type === 'IGST') ? '' : 'none';
+    recalculate();
+  }
 </script>
+
+
 </main>
 </body>
 </html>

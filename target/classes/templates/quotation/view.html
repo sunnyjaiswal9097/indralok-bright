@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en"
-      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+      th:replace="~{fragments/layout :: layout('View Quotation', ~{::main})}">
 	  
 	  
 	  <!--<html xmlns:th="http://www.thymeleaf.org" lang="en"
@@ -23,7 +23,10 @@
   <!-- Company Header -->
   <div class="doc-header">
     <div class="doc-company">
-      <div class="doc-logo">IB</div>
+      <!--<div class="doc-logo">IB</div> -->
+      <div class="doc-logo">
+      <img th:src="@{/images/logo.jpeg}" alt="Logo">
+    </div>
       <div>
         <h2>INDRALOK BRIGHT</h2>
         <p>GSTIN: 07BFUPJ8592J1ZH</p>
@@ -113,8 +116,23 @@
     <span th:text="${quotation.notes}" style="white-space:pre-wrap"></span>
   </div>
 
-  <!-- Bank Details -->
+  <!-- Bank Details 
   <div class="doc-bank">
+    <strong>Bank Details for Payment</strong>
+    <table class="bank-info-table">
+      <tr><td>Beneficiary Name:</td><td>Indralok Bright</td></tr>
+      <tr><td>Account No.:</td><td>924020047590929</td></tr>
+      <tr><td>IFSC Code:</td><td>UTIB0001540</td></tr>
+      <tr><td>Bank:</td><td>Axis Bank</td></tr>
+    </table>
+  </div> -->
+  
+  
+  <!-- Bank Details + Cancelled Cheque -->
+<div class="doc-bank-row" style="display:flex; align-items:flex-start; gap:24px; margin:12px 0;">
+  
+  <!-- Bank Table -->
+  <div class="doc-bank" style="flex:1;">
     <strong>Bank Details for Payment</strong>
     <table class="bank-info-table">
       <tr><td>Beneficiary Name:</td><td>Indralok Bright</td></tr>
@@ -124,11 +142,21 @@
     </table>
   </div>
 
-  <!-- Signature -->
+  <!-- Cancelled Cheque -->
+  <div class="doc-cheque" style="flex:1; text-align:center;">
+    <p style="font-size:12px; color:#1a237e; font-weight:bold; margin-bottom:6px;">Cancelled Cheque</p>
+    <img th:src="@{/images/cancelled_cheque.jpeg}" 
+         alt="Cancelled Cheque" 
+         style="max-width:100%; width:360px; border:1px solid #ddd; border-radius:6px; box-shadow:0 2px 6px rgba(0,0,0,0.12);"/>
+  </div>
+
+</div>
+
+  <!-- Signature 
   <div class="doc-signature">
     <div class="sig-block"><div class="sig-line"></div><p>Prepared By</p></div>
     <div class="sig-block"><div class="sig-line"></div><p>For Indralok Bright<br/><small>Authorised Signatory</small></p></div>
-  </div>
+  </div>-->
 </div>
 
 <!-- Status Update -->

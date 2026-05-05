@@ -12,7 +12,7 @@ public class IndralokBrightApplication {
         SpringApplication.run(IndralokBrightApplication.class, args);
         log.info("========================================");
         log.info("  Indralok Bright Application Started  ");
-        log.info("  URL: http://localhost:8080            ");
+        log.info("  URL:              ");
         log.info("  Login: admin / admin123               ");
         log.info("========================================");
     }

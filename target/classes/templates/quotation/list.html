@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en"
-      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+      th:replace="~{fragments/layout :: layout('Quotations', ~{::main})}">
 <head><title>Quotations</title></head>
 <body>
 <main>
@@ -43,7 +43,7 @@
             <a th:href="@{/quotation/{id}/edit(id=${q.id})}" class="btn btn-icon btn-warning" title="Edit"><i class="fas fa-edit"></i></a>
             <a th:href="@{/quotation/{id}/pdf(id=${q.id})}" class="btn btn-icon btn-danger" title="Download PDF"><i class="fas fa-file-pdf"></i></a>
             <form th:action="@{/quotation/{id}/delete(id=${q.id})}" method="post" style="display:inline"
-                  onsubmit="return confirm('Delete quotation ' + '[[${q.quotationNumber}]]' + '?')">
+                  onsubmit="returnconfirm('Delete quotation ' + '[[${q.quotationNumber}]]' + '?')">
               <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
               <button type="submit" class="btn btn-icon btn-delete" title="Delete"><i class="fas fa-trash"></i></button>
             </form>

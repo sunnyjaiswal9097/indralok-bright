@@ -139,6 +139,121 @@ public class QuotationController {
     
     
     
+	/*
+	 * @PostMapping("/save") public String save(
+	 * 
+	 * @RequestParam String billToCompany,
+	 * 
+	 * @RequestParam(required = false) String billToGstin,
+	 * 
+	 * @RequestParam(required = false) String billToAddress,
+	 * 
+	 * @RequestParam(required = false) String shipToCompany,
+	 * 
+	 * @RequestParam(required = false) String shipToSiteInfo,
+	 * 
+	 * @RequestParam(required = false) String shipToAddress,
+	 * 
+	 * @RequestParam(required = false) String shipToCity,
+	 * 
+	 * @RequestParam(required = false) String shipToState,
+	 * 
+	 * @RequestParam(required = false) String shipToPincode,
+	 * 
+	 * @RequestParam String quotationDate,
+	 * 
+	 * @RequestParam(required = false) String validityPeriod,
+	 * 
+	 * @RequestParam String gstType,
+	 * 
+	 * @RequestParam(defaultValue = "0") BigDecimal cgstPercent,
+	 * 
+	 * @RequestParam(defaultValue = "0") BigDecimal sgstPercent,
+	 * 
+	 * @RequestParam(defaultValue = "0") BigDecimal igstPercent,
+	 * 
+	 * @RequestParam String status,
+	 * 
+	 * @RequestParam(required = false) String notes,
+	 * 
+	 * @RequestParam(required = false, defaultValue = "QUOTATION") String
+	 * quotationTitle,
+	 * 
+	 * @RequestParam(required = false) Long editId,
+	 * 
+	 * // Items
+	 * 
+	 * @RequestParam List<String> itemDescription,
+	 * 
+	 * @RequestParam List<BigDecimal> itemQuantity,
+	 * 
+	 * @RequestParam List<String> itemUnit,
+	 * 
+	 * @RequestParam List<BigDecimal> itemRate,
+	 * 
+	 * Authentication auth, RedirectAttributes redirectAttributes) {
+	 * 
+	 * try { Quotation q;
+	 * 
+	 * // 🔁 EDIT CASE if (editId != null) { q = quotationService.findById(editId);
+	 * 
+	 * if (q == null) { redirectAttributes.addFlashAttribute("errorMsg",
+	 * "Quotation not found!"); return "redirect:/quotation/list"; }
+	 * 
+	 * // IMPORTANT: clear existing items (do not replace list)
+	 * q.getItems().clear();
+	 * 
+	 * } else { // 🆕 NEW CASE q = new Quotation(); }
+	 * 
+	 * // ============================= // 🧾 SET BASIC DETAILS //
+	 * ============================= q.setBillToCompany(billToCompany);
+	 * q.setBillToGstin(billToGstin); q.setBillToAddress(billToAddress);
+	 * 
+	 * q.setShipToCompany(shipToCompany); q.setShipToSiteInfo(shipToSiteInfo);
+	 * q.setShipToAddress(shipToAddress); q.setShipToCity(shipToCity);
+	 * q.setShipToState(shipToState); q.setShipToPincode(shipToPincode);
+	 * 
+	 * q.setQuotationDate(LocalDate.parse(quotationDate));
+	 * q.setValidityPeriod(validityPeriod);
+	 * 
+	 * q.setGstType(gstType); q.setCgstPercent(cgstPercent);
+	 * q.setSgstPercent(sgstPercent); q.setIgstPercent(igstPercent);
+	 * 
+	 * q.setStatus(status); q.setNotes(notes); q.setQuotationTitle(quotationTitle);
+	 * 
+	 * // ============================= // 📦 HANDLE ITEMS (FIXED LOGIC) //
+	 * ============================= for (int i = 0; i < itemDescription.size();
+	 * i++) {
+	 * 
+	 * if (itemDescription.get(i) == null || itemDescription.get(i).isBlank()) {
+	 * continue; }
+	 * 
+	 * QuotationItem item = QuotationItem.builder() .sNo(i + 1)
+	 * .description(itemDescription.get(i)) .quantity(itemQuantity.get(i))
+	 * .unit(itemUnit.get(i)) .rate(itemRate.get(i)) .build();
+	 * 
+	 * // VERY IMPORTANT (maintain relation) item.setQuotation(q);
+	 * 
+	 * // Add to existing list (DO NOT replace list) q.getItems().add(item); }
+	 * 
+	 * // ============================= // 💾 SAVE // =============================
+	 * Quotation saved = quotationService.save(q, auth.getName());
+	 * 
+	 * redirectAttributes.addFlashAttribute("successMsg", "Quotation " +
+	 * saved.getQuotationNumber() + " saved successfully!");
+	 * 
+	 * return "redirect:/quotation/" + saved.getId();
+	 * 
+	 * } catch (Exception e) { log.error("Error saving quotation: {}",
+	 * e.getMessage(), e);
+	 * 
+	 * redirectAttributes.addFlashAttribute("errorMsg", "Error saving quotation: " +
+	 * e.getMessage());
+	 * 
+	 * return "redirect:/quotation/new"; } }
+	 */  
+    
+    
     @PostMapping("/save")
     public String save(
             @RequestParam String billToCompany,
@@ -158,13 +273,14 @@ public class QuotationController {
             @RequestParam(defaultValue = "0") BigDecimal igstPercent,
             @RequestParam String status,
             @RequestParam(required = false) String notes,
+            @RequestParam(required = false, defaultValue = "QUOTATION") String quotationTitle,
             @RequestParam(required = false) Long editId,
 
             // Items
-            @RequestParam List<String> itemDescription,
-            @RequestParam List<BigDecimal> itemQuantity,
-            @RequestParam List<String> itemUnit,
-            @RequestParam List<BigDecimal> itemRate,
+            @RequestParam(required = false) List<String> itemDescription,
+            @RequestParam(required = false) List<BigDecimal> itemQuantity,
+            @RequestParam(required = false) List<String> itemUnit,
+            @RequestParam(required = false) List<BigDecimal> itemRate,
 
             Authentication auth,
             RedirectAttributes redirectAttributes) {
@@ -181,7 +297,7 @@ public class QuotationController {
                     return "redirect:/quotation/list";
                 }
 
-                // IMPORTANT: clear existing items (do not replace list)
+                // Clear existing items
                 q.getItems().clear();
 
             } else {
@@ -213,29 +329,55 @@ public class QuotationController {
 
             q.setStatus(status);
             q.setNotes(notes);
+            q.setQuotationTitle(quotationTitle);
 
             // =============================
-            // 📦 HANDLE ITEMS (FIXED LOGIC)
+            // 📦 HANDLE ITEMS (SAFE LOGIC)
             // =============================
-            for (int i = 0; i < itemDescription.size(); i++) {
 
-                if (itemDescription.get(i) == null || itemDescription.get(i).isBlank()) {
-                    continue;
+            // Guard: if no items submitted at all
+            if (itemDescription != null && !itemDescription.isEmpty()) {
+
+                // Use MINIMUM size across all lists to prevent IndexOutOfBoundsException
+                // This handles cases where special characters in textarea cause parsing differences
+                int itemCount = itemDescription.size();
+                if (itemQuantity != null) itemCount = Math.min(itemCount, itemQuantity.size());
+                if (itemUnit     != null) itemCount = Math.min(itemCount, itemUnit.size());
+                if (itemRate     != null) itemCount = Math.min(itemCount, itemRate.size());
+
+                int sNoCounter = 1;
+
+                for (int i = 0; i < itemCount; i++) {
+
+                    String desc = itemDescription.get(i);
+
+                    // Skip blank rows
+                    if (desc == null || desc.isBlank()) continue;
+
+                    // Safe get with fallback
+                    BigDecimal qty  = (itemQuantity != null && i < itemQuantity.size())
+                                      ? itemQuantity.get(i) : BigDecimal.ZERO;
+                    BigDecimal rate = (itemRate != null && i < itemRate.size())
+                                      ? itemRate.get(i) : BigDecimal.ZERO;
+                    String unit     = (itemUnit != null && i < itemUnit.size())
+                                      ? itemUnit.get(i) : "NOS";
+
+                    // Always calculate amount server-side — never trust readonly client field
+                    BigDecimal amount = qty.multiply(rate);
+
+                    QuotationItem item = QuotationItem.builder()
+                            .sNo(sNoCounter++)
+                            .description(desc)
+                            .quantity(qty)
+                            .unit(unit)
+                            .rate(rate)
+                            .amount(amount)
+                            .build();
+
+                    // Maintain relation
+                    item.setQuotation(q);
+                    q.getItems().add(item);
                 }
-
-                QuotationItem item = QuotationItem.builder()
-                        .sNo(i + 1)
-                        .description(itemDescription.get(i))
-                        .quantity(itemQuantity.get(i))
-                        .unit(itemUnit.get(i))
-                        .rate(itemRate.get(i))
-                        .build();
-
-                // VERY IMPORTANT (maintain relation)
-                item.setQuotation(q);
-
-                // Add to existing list (DO NOT replace list)
-                q.getItems().add(item);
             }
 
             // =============================
@@ -257,7 +399,6 @@ public class QuotationController {
             return "redirect:/quotation/new";
         }
     }
-    
 
 
     // ---- VIEW ----
@@ -310,7 +451,7 @@ public class QuotationController {
         try {
             Quotation q = quotationService.findById(id);
             byte[] pdf = pdfService.generateQuotationPdf(q);
-            String filename = "Quotation_" + q.getQuotationNumber() + ".pdf";
+            String filename = q.getQuotationTitle() +"_" + q.getQuotationNumber() + ".pdf";
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                     .contentType(MediaType.APPLICATION_PDF)

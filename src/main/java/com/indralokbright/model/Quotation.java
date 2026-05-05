@@ -32,6 +32,8 @@ public class Quotation {
     // Bill To
     @Column(nullable = false, length = 200)
     private String billToCompany;
+    
+    private String quotationTitle;
 
     @Column(length = 20)
     private String billToGstin;

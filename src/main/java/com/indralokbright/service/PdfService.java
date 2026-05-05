@@ -20,9 +20,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 import java.util.Locale;
 
 @Service
@@ -45,9 +47,43 @@ public class PdfService {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final NumberFormat INR_FMT = NumberFormat.getInstance(new Locale("en", "IN"));
 
+    // Company logo embedded as Base64 data URI for PDF rendering
+    private static final String LOGO_BASE64;
+
+    // Cancelled cheque embedded as Base64 data URI for PDF rendering
+    private static final String CHEQUE_BASE64;
+
     static {
         INR_FMT.setMinimumFractionDigits(2);
         INR_FMT.setMaximumFractionDigits(2);
+
+        // Load logo
+        String logoUri = "";
+        try (InputStream is = PdfService.class.getResourceAsStream("/static/images/logo.jpeg")) {
+            if (is != null) {
+                byte[] bytes = is.readAllBytes();
+                logoUri = "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(bytes);
+            } else {
+                System.err.println("[PdfService] WARNING: /static/images/logo.jpeg not found on classpath");
+            }
+        } catch (Exception e) {
+            System.err.println("[PdfService] WARNING: Failed to load company logo: " + e.getMessage());
+        }
+        LOGO_BASE64 = logoUri;
+
+        // Load cancelled cheque
+        String chequeUri = "";
+        try (InputStream is = PdfService.class.getResourceAsStream("/static/images/cancelled_cheque.jpeg")) {
+            if (is != null) {
+                byte[] bytes = is.readAllBytes();
+                chequeUri = "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(bytes);
+            } else {
+                System.err.println("[PdfService] WARNING: /static/images/cancelled_cheque.jpeg not found on classpath");
+            }
+        } catch (Exception e) {
+            System.err.println("[PdfService] WARNING: Failed to load cancelled cheque: " + e.getMessage());
+        }
+        CHEQUE_BASE64 = chequeUri;
     }
 
     public byte[] generateQuotationPdf(Quotation q) {
@@ -85,6 +121,25 @@ public class PdfService {
         return INR_FMT.format(val);
     }
 
+    /** Returns the logo HTML: real image if loaded, fallback text badge otherwise */
+    private String logoHtml() {
+        if (LOGO_BASE64 != null && !LOGO_BASE64.isEmpty()) {
+            return "<img src='" + LOGO_BASE64 + "' class='company-logo-img' alt='Logo'/>";
+        }
+        return "<div class='company-logo'>IB</div>";
+    }
+
+    /** Returns the cancelled cheque HTML if image is loaded */
+    private String chequeHtml() {
+        if (CHEQUE_BASE64 != null && !CHEQUE_BASE64.isEmpty()) {
+            return "<div class='cheque-box'>"
+                 + "<p class='cheque-label'><strong>Cancelled Cheque</strong></p>"
+                 + "<img src='" + CHEQUE_BASE64 + "' class='cheque-img' alt='Cancelled Cheque'/>"
+                 + "</div>";
+        }
+        return "";
+    }
+
     private String buildQuotationHtml(Quotation q) {
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html><html><head><meta charset='UTF-8'/><style>");
@@ -94,7 +149,7 @@ public class PdfService {
         // Header
         sb.append("<div class='header'>");
         sb.append("<div class='logo-section'>");
-        sb.append("<div class='company-logo'>IB</div>");
+        sb.append(logoHtml());
         sb.append("<div class='company-details'>");
         sb.append("<h1>").append(companyName).append("</h1>");
         sb.append("<p>GSTIN: ").append(companyGstin).append("</p>");
@@ -142,41 +197,11 @@ public class PdfService {
             sb.append("<td class='center'>").append(fmt(item.getAmount())).append("</td>");
             sb.append("</tr>");
         }
-        sb.append("</tbody></table>");		
+        sb.append("</tbody></table>");
 
-        // Totals
-		/*
-		 * sb.append("<div class='totals-section'>");
-		 * sb.append("<div class='amount-words'>");
-		 * sb.append("<p><strong>Amount in Words:</strong><br/>");
-		 * sb.append(numberToWordsUtil.convert(q.getTotalAmount()));
-		 * 
-		 * sb.append("</p></div>"); sb.append("<table class='totals-table'>");
-		 * sb.append("<tr><td>Sub Total</td><td>&#8377; ").append(fmt(q.getSubtotal())).
-		 * append("</td></tr>");
-		 * 
-		 * 
-		 * 
-		 * 
-		 * if ("IGST".equals(q.getGstType())) {
-		 * sb.append("<tr><td>IGST @ ").append(fmt(q.getIgstPercent())).
-		 * append("%</td><td>&#8377; ").append(fmt(q.getIgstAmount())).append(
-		 * "</td></tr>"); } else { if (q.getCgstPercent().compareTo(BigDecimal.ZERO) >
-		 * 0) sb.append("<tr><td>CGST @ ").append(fmt(q.getCgstPercent())).
-		 * append("%</td><td>&#8377; ").append(fmt(q.getCgstAmount())).append(
-		 * "</td></tr>"); if (q.getSgstPercent().compareTo(BigDecimal.ZERO) > 0)
-		 * sb.append("<tr><td>SGST @ ").append(fmt(q.getSgstPercent())).
-		 * append("%</td><td>&#8377; ").append(fmt(q.getSgstAmount())).append(
-		 * "</td></tr>"); } sb.
-		 * append("<tr class='total-row'><td><strong>Total</strong></td><td><strong>&#8377; "
-		 * ).append(fmt(q.getTotalAmount())).append("</strong></td></tr>");
-		 * sb.append("</table></div>");
-		 */
-        
-     // ✅ Totals Table First
+        // Totals Table
         sb.append("<table class='totals-table'>");
         sb.append("<tr><td>Sub Total</td><td>&#8377; ").append(fmt(q.getSubtotal())).append("</td></tr>");
-
         if ("IGST".equals(q.getGstType())) {
             sb.append("<tr><td>IGST @ ").append(fmt(q.getIgstPercent())).append("%</td><td>&#8377; ").append(fmt(q.getIgstAmount())).append("</td></tr>");
         } else {
@@ -185,44 +210,32 @@ public class PdfService {
             if (q.getSgstPercent().compareTo(BigDecimal.ZERO) > 0)
                 sb.append("<tr><td>SGST @ ").append(fmt(q.getSgstPercent())).append("%</td><td>&#8377; ").append(fmt(q.getSgstAmount())).append("</td></tr>");
         }
-
         sb.append("<tr class='total-row'><td><strong>Total</strong></td><td><strong>&#8377; ")
-          .append(fmt(q.getTotalAmount()))
-          .append("</strong></td></tr>");
+          .append(fmt(q.getTotalAmount())).append("</strong></td></tr>");
         sb.append("</table>");
 
-        // ✅ NOW Amount in Words BELOW
+        // Amount in Words
         sb.append("<div class='amount-words-bottom'>");
         sb.append("<p><strong>Amount in Words:</strong><br/>");
         sb.append(numberToWordsUtil.convert(q.getTotalAmount()));
-        sb.append("</p>");
-        sb.append("</div>");
+        sb.append("</p></div>");
 
         // Notes
         if (q.getNotes() != null && !q.getNotes().isBlank()) {
             sb.append("<div class='notes-section'><h3>Terms &amp; Conditions</h3><p>").append(esc(q.getNotes())).append("</p></div>");
         }
 
-      
-        
-        
-        
-        
-        // Bank Details
-        sb.append("<div class='bank-section'>");
-        sb.append("<h3>Bank Details for Payment</h3>");
-        sb.append("<table class='bank-table'>");
-        sb.append("<tr><td>Beneficiary Name</td><td>").append(bankBeneficiary).append("</td></tr>");
-        sb.append("<tr><td>Account No.</td><td>").append(bankAccount).append("</td></tr>");
-        sb.append("<tr><td>IFSC Code</td><td>").append(bankIfsc).append("</td></tr>");
-        sb.append("<tr><td>Bank</td><td>").append(bankName).append("</td></tr>");
-        sb.append("</table></div>");
+        // Bank Details + Cancelled Cheque
+        appendNotesAndBank(sb, null); // notes already appended above
 
         // Signature
-        sb.append("<div class='signature-section'>");
-        sb.append("<div class='sig-box'><p>Prepared By</p><div class='sig-line'></div></div>");
-        sb.append("<div class='sig-box'><p>For ").append(companyName).append("</p><div class='sig-line'></div><p>Authorised Signatory</p></div>");
-        sb.append("</div>");
+		/*
+		 * sb.append("<div class='signature-section'>"); sb.
+		 * append("<div class='sig-box'><p>Prepared By</p><div class='sig-line'></div></div>"
+		 * ); sb.append("<div class='sig-box'><p>For ").append(companyName).
+		 * append("</p><div class='sig-line'></div><p>Authorised Signatory</p></div>");
+		 * sb.append("</div>");
+		 */
 
         sb.append("</body></html>");
         return sb.toString();
@@ -237,7 +250,7 @@ public class PdfService {
         // Header
         sb.append("<div class='header'>");
         sb.append("<div class='logo-section'>");
-        sb.append("<div class='company-logo'>IB</div>");
+        sb.append(logoHtml());
         sb.append("<div class='company-details'>");
         sb.append("<h1>").append(companyName).append("</h1>");
         sb.append("<p>GSTIN: ").append(companyGstin).append("</p>");
@@ -285,34 +298,9 @@ public class PdfService {
         }
         sb.append("</tbody></table>");
 
-        // Totals
-		/*
-		 * sb.append("<div class='totals-section'>");
-		 * sb.append("<div class='amount-words'>");
-		 * sb.append("<p><strong>Amount in Words:</strong><br/>");
-		 * sb.append(numberToWordsUtil.convert(po.getTotalAmount()));
-		 * sb.append("</p></div>"); sb.append("<table class='totals-table'>");
-		 * sb.append("<tr><td>Sub Total</td><td>&#8377; ").append(fmt(po.getSubtotal()))
-		 * .append("</td></tr>"); if ("IGST".equals(po.getGstType())) {
-		 * sb.append("<tr><td>IGST @ ").append(fmt(po.getIgstPercent())).
-		 * append("%</td><td>&#8377; ").append(fmt(po.getIgstAmount())).append(
-		 * "</td></tr>"); } else { if (po.getCgstPercent().compareTo(BigDecimal.ZERO) >
-		 * 0) sb.append("<tr><td>CGST @ ").append(fmt(po.getCgstPercent())).
-		 * append("%</td><td>&#8377; ").append(fmt(po.getCgstAmount())).append(
-		 * "</td></tr>"); if (po.getSgstPercent().compareTo(BigDecimal.ZERO) > 0)
-		 * sb.append("<tr><td>SGST @ ").append(fmt(po.getSgstPercent())).
-		 * append("%</td><td>&#8377; ").append(fmt(po.getSgstAmount())).append(
-		 * "</td></tr>"); } sb.
-		 * append("<tr class='total-row'><td><strong>Total</strong></td><td><strong>&#8377; "
-		 * ).append(fmt(po.getTotalAmount())).append("</strong></td></tr>");
-		 * sb.append("</table></div>");
-		 */
-        
-        
-     // ✅ Totals Table First
+        // Totals Table
         sb.append("<table class='totals-table'>");
         sb.append("<tr><td>Sub Total</td><td>&#8377; ").append(fmt(po.getSubtotal())).append("</td></tr>");
-
         if ("IGST".equals(po.getGstType())) {
             sb.append("<tr><td>IGST @ ").append(fmt(po.getIgstPercent())).append("%</td><td>&#8377; ").append(fmt(po.getIgstAmount())).append("</td></tr>");
         } else {
@@ -321,18 +309,15 @@ public class PdfService {
             if (po.getSgstPercent().compareTo(BigDecimal.ZERO) > 0)
                 sb.append("<tr><td>SGST @ ").append(fmt(po.getSgstPercent())).append("%</td><td>&#8377; ").append(fmt(po.getSgstAmount())).append("</td></tr>");
         }
-
         sb.append("<tr class='total-row'><td><strong>Total</strong></td><td><strong>&#8377; ")
-          .append(fmt(po.getTotalAmount()))
-          .append("</strong></td></tr>");
+          .append(fmt(po.getTotalAmount())).append("</strong></td></tr>");
         sb.append("</table>");
 
-        // ✅ NOW Amount in Words BELOW
+        // Amount in Words
         sb.append("<div class='amount-words-bottom'>");
         sb.append("<p><strong>Amount in Words:</strong><br/>");
         sb.append(numberToWordsUtil.convert(po.getTotalAmount()));
-        sb.append("</p>");
-        sb.append("</div>");
+        sb.append("</p></div>");
 
         // Payment Terms / T&C
         if (po.getPaymentTerms() != null && !po.getPaymentTerms().isBlank()) {
@@ -342,15 +327,8 @@ public class PdfService {
             sb.append("<div class='notes-section'><h3>Terms &amp; Conditions</h3><p>").append(esc(po.getTermsAndConditions())).append("</p></div>");
         }
 
-        // Bank Details
-        sb.append("<div class='bank-section'>");
-        sb.append("<h3>Bank Details for Payment</h3>");
-        sb.append("<table class='bank-table'>");
-        sb.append("<tr><td>Beneficiary Name</td><td>").append(bankBeneficiary).append("</td></tr>");
-        sb.append("<tr><td>Account No.</td><td>").append(bankAccount).append("</td></tr>");
-        sb.append("<tr><td>IFSC Code</td><td>").append(bankIfsc).append("</td></tr>");
-        sb.append("<tr><td>Bank</td><td>").append(bankName).append("</td></tr>");
-        sb.append("</table></div>");
+        // Bank Details + Cancelled Cheque
+        appendNotesAndBank(sb, null);
 
         // Signature
         sb.append("<div class='signature-section'>");
@@ -368,6 +346,7 @@ public class PdfService {
             body { font-family: Arial, sans-serif; font-size: 11px; color: #222; padding: 20px; }
             .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1a237e; padding-bottom: 12px; margin-bottom: 12px; }
             .logo-section { display: flex; align-items: flex-start; gap: 12px; }
+            .company-logo-img { width: 60px; height: 60px; object-fit: contain; }
             .company-logo { width: 55px; height: 55px; background: linear-gradient(135deg, #1a237e, #f57f17); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: bold; }
             .company-details h1 { font-size: 16px; color: #1a237e; margin-bottom: 3px; }
             .company-details p { font-size: 9px; color: #555; margin-bottom: 1px; }
@@ -386,17 +365,22 @@ public class PdfService {
             .right { text-align: right; }
             .totals-section { display: flex; justify-content: space-between; margin: 8px 0; }
             .amount-words { flex: 1; background: #f0f4ff; border: 1px solid #c5cae9; padding: 10px; border-radius: 4px; margin-right: 16px; font-size: 10px; }
-            .totals-table { width: 240px; border-collapse: collapse; }
+            .amount-words-bottom { background: #f0f4ff; border: 1px solid #c5cae9; padding: 10px; border-radius: 4px; margin: 8px 0; font-size: 10px; }
+            .totals-table { width: 240px; border-collapse: collapse; margin-left: auto; }
             .totals-table td { padding: 5px 8px; border-bottom: 1px solid #eee; font-size: 10px; }
             .totals-table td:last-child { text-align: right; min-width: 100px; }
             .total-row td { background: #1a237e; color: white; font-size: 11px; }
             .notes-section { background: #fffde7; border-left: 3px solid #f57f17; padding: 8px 12px; margin: 10px 0; font-size: 10px; }
             .notes-section h3 { font-size: 10px; color: #e65100; margin-bottom: 4px; }
-            .bank-section { margin: 10px 0; }
+            .bank-cheque-row { display: flex; gap: 20px; align-items: flex-start; margin: 10px 0; }
+            .bank-section { flex: 1; }
             .bank-section h3 { font-size: 11px; color: #1a237e; margin-bottom: 6px; }
-            .bank-table { border-collapse: collapse; font-size: 10px; }
+            .bank-table { border-collapse: collapse; font-size: 10px; width: 100%; }
             .bank-table td { padding: 4px 10px; border: 1px solid #ddd; }
             .bank-table td:first-child { background: #e8eaf6; font-weight: bold; width: 150px; }
+            .cheque-box { flex: 1; text-align: center; }
+            .cheque-label { font-size: 10px; color: #1a237e; font-weight: bold; margin-bottom: 4px; }
+            .cheque-img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; }
             .signature-section { display: flex; justify-content: space-between; margin-top: 30px; }
             .sig-box { text-align: center; width: 45%; font-size: 10px; }
             .sig-line { border-top: 1px solid #333; margin: 40px 0 5px; }
@@ -427,12 +411,11 @@ public class PdfService {
                 q.getShipToCompany(), q.getShipToSiteInfo(), q.getShipToAddress(),
                 q.getShipToCity(), q.getShipToState(), q.getShipToPincode());
 
-        // Items table with Margin columns
         sb.append("<table class='items-table'><thead><tr>")
           .append("<th>S.No</th><th>Description</th><th>Qty</th><th>Unit</th>")
-          .append("<th>Rate (₹)</th><th>Base Amt (₹)</th>")
-          .append("<th class='margin-col'>Margin %</th><th class='margin-col'>Margin Amt (₹)</th>")
-          .append("<th class='final-col'>Final Amt (₹)</th>")
+          .append("<th>Rate (&#8377;)</th><th>Base Amt (&#8377;)</th>")
+          .append("<th class='margin-col'>Margin %</th><th class='margin-col'>Margin Amt (&#8377;)</th>")
+          .append("<th class='final-col'>Final Amt (&#8377;)</th>")
           .append("</tr></thead><tbody>");
         for (MarginQuotationItem item : q.getItems()) {
             sb.append("<tr>")
@@ -449,7 +432,6 @@ public class PdfService {
         }
         sb.append("</tbody></table>");
 
-        // Totals
         sb.append("<div class='totals-section'>");
         sb.append("<div class='amount-words'><p><strong>Amount in Words:</strong><br/>")
           .append(numberToWordsUtil.convert(q.getGrandTotal())).append("</p></div>");
@@ -480,7 +462,7 @@ public class PdfService {
     private String buildYearlyQuotationHtml(YearlyQuotation q) {
         List<String> years = (q.getYearsCovered() != null)
                 ? Arrays.stream(q.getYearsCovered().split(",")).map(String::trim)
-                        .filter(s -> !s.isBlank()).collect(java.util.stream.Collectors.toList())
+                        .filter(s -> !s.isBlank()).collect(Collectors.toList())
                 : List.of();
 
         StringBuilder sb = new StringBuilder();
@@ -503,23 +485,22 @@ public class PdfService {
                 q.getShipToCompany(), q.getShipToSiteInfo(), q.getShipToAddress(),
                 q.getShipToCity(), q.getShipToState(), q.getShipToPincode());
 
-        // Dynamic table header — one col per year
         sb.append("<table class='items-table'><thead><tr>")
           .append("<th>S.No</th><th>Description</th><th>Unit</th>");
         for (String yr : years) sb.append("<th class='yr-col'>").append(esc(yr)).append(" Qty</th>");
-        sb.append("<th class='avg-col'>Avg Qty</th><th>Rate (₹)</th>")
-          .append("<th class='yr-col'>Base Amt (₹)</th>")
-          .append("<th class='mg-col'>Margin %</th><th class='mg-col'>Margin Amt (₹)</th>")
-          .append("<th class='fin-col'>Final Amt (₹)</th>")
+        sb.append("<th class='avg-col'>Avg Qty</th><th>Rate (&#8377;)</th>")
+          .append("<th class='yr-col'>Base Amt (&#8377;)</th>")
+          .append("<th class='mg-col'>Margin %</th><th class='mg-col'>Margin Amt (&#8377;)</th>")
+          .append("<th class='fin-col'>Final Amt (&#8377;)</th>")
           .append("</tr></thead><tbody>");
 
         for (YearlyQuotationItem item : q.getItems()) {
             List<String> qtys = (item.getYearlyQuantities() == null ? java.util.List.of() :
                 java.util.Arrays.stream(item.getYearlyQuantities().split(","))
                     .map(String::trim).filter(s -> !s.isBlank())
-                    .collect(java.util.stream.Collectors.toList()))
+                    .collect(Collectors.toList()))
                 .stream().map(bd -> { try { return fmt(new java.math.BigDecimal(bd.toString())); } catch(Exception e){ return "0.00"; } })
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
             sb.append("<tr>")
               .append("<td class='center'>").append(item.getSNo()).append("</td>")
               .append("<td>").append(esc(item.getDescription())).append("</td>")
@@ -538,17 +519,13 @@ public class PdfService {
         }
         sb.append("</tbody></table>");
 
-        // Totals
         sb.append("<div class='totals-section'>");
         sb.append("<div class='amount-words'><p><strong>Amount in Words:</strong><br/>")
           .append(numberToWordsUtil.convert(q.getGrandTotal())).append("</p></div>");
         sb.append("<table class='totals-table'>");
-        sb.append("<tr><td>Subtotal (Avg × Rate):</td><td>&#8377; ")
-          .append(fmt(q.getSubtotalBeforeMargin())).append("</td></tr>");
-        sb.append("<tr><td>Total Margin:</td><td>&#8377; ")
-          .append(fmt(q.getTotalMarginAmount())).append("</td></tr>");
-        sb.append("<tr><td>Subtotal After Margin:</td><td>&#8377; ")
-          .append(fmt(q.getSubtotalAfterMargin())).append("</td></tr>");
+        sb.append("<tr><td>Subtotal (Avg x Rate):</td><td>&#8377; ").append(fmt(q.getSubtotalBeforeMargin())).append("</td></tr>");
+        sb.append("<tr><td>Total Margin:</td><td>&#8377; ").append(fmt(q.getTotalMarginAmount())).append("</td></tr>");
+        sb.append("<tr><td>Subtotal After Margin:</td><td>&#8377; ").append(fmt(q.getSubtotalAfterMargin())).append("</td></tr>");
         appendGstRows(sb, q.getGstType(), q.getCgstPercent(), q.getCgstAmount(),
                 q.getSgstPercent(), q.getSgstAmount(), q.getIgstPercent(), q.getIgstAmount());
         sb.append("<tr class='total-row'><td><strong>Grand Total</strong></td><td><strong>&#8377; ")
@@ -568,7 +545,7 @@ public class PdfService {
             String date, String validity, String status) {
         sb.append("<div class='header'>")
           .append("<div class='logo-section'>")
-          .append("<div class='company-logo'>IB</div>")
+          .append(logoHtml())
           .append("<div class='company-details'>")
           .append("<h1>").append(companyName).append("</h1>")
           .append("<p>GSTIN: ").append(companyGstin).append("</p>")
@@ -621,17 +598,25 @@ public class PdfService {
         }
     }
 
+    /**
+     * Appends T&C notes (if provided) and the bank details + cancelled cheque side by side.
+     */
     private void appendNotesAndBank(StringBuilder sb, String notes) {
         if (notes != null && !notes.isBlank())
             sb.append("<div class='notes-section'><h3>Terms &amp; Conditions</h3><p>")
               .append(esc(notes)).append("</p></div>");
-        sb.append("<div class='bank-section'><h3>Bank Details for Payment</h3>")
+
+        // Bank + Cheque row
+        sb.append("<div class='bank-cheque-row'>")
+          .append("<div class='bank-section'><h3>Bank Details for Payment</h3>")
           .append("<table class='bank-table'>")
           .append("<tr><td>Beneficiary Name</td><td>").append(bankBeneficiary).append("</td></tr>")
           .append("<tr><td>Account No.</td><td>").append(bankAccount).append("</td></tr>")
           .append("<tr><td>IFSC Code</td><td>").append(bankIfsc).append("</td></tr>")
           .append("<tr><td>Bank</td><td>").append(bankName).append("</td></tr>")
-          .append("</table></div>");
+          .append("</table></div>")
+          .append(chequeHtml())
+          .append("</div>");
     }
 
     private void appendSignature(StringBuilder sb) {
