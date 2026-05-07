@@ -1,6 +1,9 @@
-"target/" 
-".sts4/" 
-".settings/" 
-"*.class" 
-"*.log" 
-"target/" 
+target/
+*.class
+*.log
+.sts4/
+.settings/
+.classpath
+.project
+*.iml
+.idea/
